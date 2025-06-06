@@ -24,10 +24,10 @@ jobs:
 
     - name: Build and tag Docker image
       run: |
-        IMAGE_NAME=${{ secrets.ACR_NAME }}.azurecr.io/myapp:latest
+        IMAGE_NAME=${{ secrets.ACR_NAME }}.azurecr.io/APA-backend:latest
         docker build -t $IMAGE_NAME .
     
     - name: Push image to ACR
       run: |
-        IMAGE_NAME=${{ secrets.ACR_NAME }}.azurecr.io/myapp:latest
+        IMAGE_NAME=${{ secrets.ACR_NAME }}.azurecr.io/APA-backend:latest
         docker push $IMAGE_NAME

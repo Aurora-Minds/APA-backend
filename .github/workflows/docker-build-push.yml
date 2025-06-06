@@ -1,34 +1,25 @@
-name: Build and Push Docker Image to Azure Container Registry
-
-on:
-  push:
-    branches: [ "main" ]
+on: [push]
+name: Linux_Container_Workflow
 
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout source code
-      uses: actions/checkout@v3
-
-    - name: Log in to Azure
-      uses: azure/login@v1
-      with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-
-    - name: Log in to ACR
-      run: az acr login --name ${{ secrets.ACR_NAME }}
-
-    - name: Build and tag Docker image
-      run: |
-        IMAGE_NAME=${{ secrets.ACR_NAME }}.azurecr.io/APA-backend:latest
-        docker build -t $IMAGE_NAME .
-    
-    - name: Push image to ACR
-      run: |
-        IMAGE_NAME=${{ secrets.ACR_NAME }}.azurecr.io/APA-backend:latest
-        docker push $IMAGE_NAME
+    build-and-deploy:
+        runs-on: ubuntu-latest
+        steps:
+        # checkout the repo
+        - name: 'Checkout GitHub Action'
+          uses: actions/checkout@main
+          
+        - name: 'Login via Azure CLI'
+          uses: azure/login@v1
+          with:
+            creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+        - name: 'Build and push image'
+          uses: azure/docker-login@v1
+          with:
+            login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+            username: ${{ secrets.REGISTRY_USERNAME }}
+            password: ${{ secrets.REGISTRY_PASSWORD }}
+        - run: |
+            docker build . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/APA-backend:${{ github.sha }}
+            docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/APA-backend:${{ github.sha }}

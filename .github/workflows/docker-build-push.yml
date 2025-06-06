@@ -1,0 +1,33 @@
+name: Build and Push Docker Image to Azure Container Registry
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v3
+
+    - name: Log in to Azure
+      uses: azure/login@v1
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Log in to ACR
+      run: az acr login --name ${{ secrets.ACR_NAME }}
+
+    - name: Build and tag Docker image
+      run: |
+        IMAGE_NAME=${{ secrets.ACR_NAME }}.azurecr.io/myapp:latest
+        docker build -t $IMAGE_NAME .
+    
+    - name: Push image to ACR
+      run: |
+        IMAGE_NAME=${{ secrets.ACR_NAME }}.azurecr.io/myapp:latest
+        docker push $IMAGE_NAME

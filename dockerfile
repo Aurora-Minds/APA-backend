@@ -1,3 +1,7 @@
+# backend/Dockerfile
+
+# Use an official Node.js runtime as a parent image
+# Using Alpine version for a smaller image size
 FROM node:18-alpine
 
 # Set the working directory in the container
@@ -16,4 +20,4 @@ COPY . .
 EXPOSE 5000
 
 # Command to run the application
-CMD ["npm", "run", "prod"]
+CMD ["npm", "run", "dev"]

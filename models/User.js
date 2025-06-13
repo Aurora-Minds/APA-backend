@@ -29,6 +29,10 @@ const userSchema = new mongoose.Schema({
     subjects: {
         type: [String],
         default: ['English', 'Math', 'Science', 'History']
+    },
+    xp: {
+        type: Number,
+        default: 0
     }
 });
 

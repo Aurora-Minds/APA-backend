@@ -21,9 +21,15 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/academic-
 .catch(err => console.log('MongoDB Connection Error:', err));
 
 // Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/tasks', require('./routes/tasks'));
-app.use('/api/users', require('./routes/users'));
+const authRoutes = require('./routes/auth');
+const taskRoutes = require('./routes/tasks');
+const userRoutes = require('./routes/users');
+const focusSessionRoutes = require('./routes/focusSessions');
+
+app.use('/api/users', userRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/focus-sessions', focusSessionRoutes);
 
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`)); 

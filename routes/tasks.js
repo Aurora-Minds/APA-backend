@@ -14,8 +14,8 @@ router.get('/', auth, async (req, res) => {
         const tasks = await Task.find({ user: req.user.id }).sort({ createdAt: -1 });
         res.json(tasks);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        console.error('Error fetching tasks:', err.message);
+        res.status(500).json({ msg: 'Error fetching tasks. Please try again later.' });
     }
 });
 
@@ -25,7 +25,10 @@ router.get('/', auth, async (req, res) => {
 router.post('/', [
     auth,
     [
-        check('title', 'Title is required').not().isEmpty()
+        check('title', 'Title is required').not().isEmpty().trim(),
+        check('subject', 'Subject is required').not().isEmpty().trim(),
+        check('dueDate', 'Due date must be a valid date').optional().isISO8601(),
+        check('priority', 'Priority must be low, medium, or high').optional().isIn(['low', 'medium', 'high'])
     ]
 ], async (req, res) => {
     const errors = validationResult(req);
@@ -35,28 +38,45 @@ router.post('/', [
 
     try {
         const newTask = new Task({
-            title: req.body.title,
-            subject: req.body.subject,
-            description: req.body.description,
+            title: req.body.title.trim(),
+            subject: req.body.subject.trim(),
+            description: req.body.description?.trim(),
             dueDate: req.body.dueDate,
-            priority: req.body.priority,
+            priority: req.body.priority || 'medium',
             user: req.user.id
         });
 
         const task = await newTask.save();
         res.json(task);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        console.error('Error creating task:', err.message);
+        if (err.name === 'ValidationError') {
+            return res.status(400).json({ msg: 'Invalid task data provided' });
+        }
+        res.status(500).json({ msg: 'Error creating task. Please try again later.' });
     }
 });
 
 // @route   PUT api/tasks/:id
 // @desc    Update a task
 // @access  Private
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', [
+    auth,
+    [
+        check('title', 'Title is required').optional().not().isEmpty().trim(),
+        check('subject', 'Subject is required').optional().not().isEmpty().trim(),
+        check('dueDate', 'Due date must be a valid date').optional().isISO8601(),
+        check('priority', 'Priority must be low, medium, or high').optional().isIn(['low', 'medium', 'high']),
+        check('status', 'Status must be pending, in-progress, or completed').optional().isIn(['pending', 'in-progress', 'completed'])
+    ]
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
     try {
-        let task = await Task.findById(req.params.id);
+        const task = await Task.findById(req.params.id);
         if (!task) {
             return res.status(404).json({ msg: 'Task not found' });
         }
@@ -66,23 +86,28 @@ router.put('/:id', auth, async (req, res) => {
             return res.status(401).json({ msg: 'Not authorized' });
         }
 
-        task = await Task.findByIdAndUpdate(
+        // Update only provided fields
+        const updateFields = {};
+        if (req.body.title) updateFields.title = req.body.title.trim();
+        if (req.body.subject) updateFields.subject = req.body.subject.trim();
+        if (req.body.description !== undefined) updateFields.description = req.body.description?.trim();
+        if (req.body.dueDate) updateFields.dueDate = req.body.dueDate;
+        if (req.body.priority) updateFields.priority = req.body.priority;
+        if (req.body.status) updateFields.status = req.body.status;
+
+        const updatedTask = await Task.findByIdAndUpdate(
             req.params.id,
-            { $set: {
-                title: req.body.title,
-                subject: req.body.subject,
-                description: req.body.description,
-                dueDate: req.body.dueDate,
-                priority: req.body.priority,
-                status: req.body.status
-            } },
-            { new: true }
+            { $set: updateFields },
+            { new: true, runValidators: true }
         );
 
-        res.json(task);
+        res.json(updatedTask);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        console.error('Error updating task:', err.message);
+        if (err.name === 'ValidationError') {
+            return res.status(400).json({ msg: 'Invalid task data provided' });
+        }
+        res.status(500).json({ msg: 'Error updating task. Please try again later.' });
     }
 });
 
@@ -104,8 +129,11 @@ router.delete('/:id', auth, async (req, res) => {
         await Task.findByIdAndDelete(req.params.id);
         res.json({ msg: 'Task removed' });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        console.error('Error deleting task:', err.message);
+        if (err.name === 'CastError') {
+            return res.status(400).json({ msg: 'Invalid task ID' });
+        }
+        res.status(500).json({ msg: 'Error deleting task. Please try again later.' });
     }
 });
 

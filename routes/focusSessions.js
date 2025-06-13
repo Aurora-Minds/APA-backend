@@ -121,4 +121,32 @@ router.get('/task/:taskId', auth, async (req, res) => {
     }
 });
 
+// Save a session
+router.post('/', auth, async (req, res) => {
+  try {
+    const { type, duration, startedAt, endedAt } = req.body;
+    const session = new FocusSession({
+      user: req.user.id,
+      type,
+      duration,
+      startedAt,
+      endedAt
+    });
+    await session.save();
+    res.status(201).json(session);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get all sessions for the logged-in user
+router.get('/', auth, async (req, res) => {
+  try {
+    const sessions = await FocusSession.find({ user: req.user.id }).sort({ startedAt: -1 });
+    res.json(sessions);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 module.exports = router; 

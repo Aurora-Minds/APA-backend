@@ -63,14 +63,15 @@ router.post('/register', [
 // @access  Public
 router.post('/login', [
     check('email', 'Please include a valid email').isEmail(),
-    check('password', 'Password is required').exists()
+    check('password', 'Password is required').exists(),
+    check('rememberMe', 'Remember me must be a boolean').optional().isBoolean()
 ], async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
 
-    const { email, password } = req.body;
+    const { email, password, rememberMe } = req.body;
 
     try {
         let user = await User.findOne({ email });
@@ -89,18 +90,21 @@ router.post('/login', [
             }
         };
 
+        // Set token expiration based on rememberMe
+        const expiresIn = rememberMe ? '7d' : '24h'; // 7 days if rememberMe is true, 24 hours if false
+
         jwt.sign(
             payload,
             process.env.JWT_SECRET || 'your-secret-key',
-            { expiresIn: '24h' },
+            { expiresIn },
             (err, token) => {
                 if (err) throw err;
                 res.json({ token });
             }
         );
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server error');
+        console.error('Error during login:', err.message);
+        res.status(500).json({ msg: 'Server error during login' });
     }
 });
 

@@ -1,14 +1,14 @@
 const mongoose = require('mongoose');
 
-const focusSessionSchema = new mongoose.Schema({
+const FocusSessionSchema = new mongoose.Schema({
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
     },
-    task: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Task',
+    type: {
+        type: String,
+        enum: ['focus', 'shortBreak', 'longBreak'],
         required: true
     },
     duration: {
@@ -36,11 +36,19 @@ const focusSessionSchema = new mongoose.Schema({
         type: String,
         trim: true,
         comment: 'Optional notes about the session'
+    },
+    startedAt: {
+        type: Date,
+        required: true
+    },
+    endedAt: {
+        type: Date,
+        required: true
     }
 });
 
 // Add indexes for better query performance
-focusSessionSchema.index({ user: 1, completedAt: -1 });
-focusSessionSchema.index({ task: 1 });
+FocusSessionSchema.index({ user: 1, completedAt: -1 });
+FocusSessionSchema.index({ type: 1 });
 
-module.exports = mongoose.model('FocusSession', focusSessionSchema); 
+module.exports = mongoose.model('FocusSession', FocusSessionSchema); 

@@ -12,9 +12,19 @@ module.exports = function(req, res, next) {
     // Verify token
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        if (!decoded.user || !decoded.user.id) {
+            return res.status(401).json({ msg: 'Invalid token format' });
+        }
         req.user = decoded.user;
         next();
     } catch (err) {
+        console.error('Auth middleware error:', err.message);
+        if (err.name === 'TokenExpiredError') {
+            return res.status(401).json({ msg: 'Token has expired' });
+        }
+        if (err.name === 'JsonWebTokenError') {
+            return res.status(401).json({ msg: 'Invalid token' });
+        }
         res.status(401).json({ msg: 'Token is not valid' });
     }
 }; 

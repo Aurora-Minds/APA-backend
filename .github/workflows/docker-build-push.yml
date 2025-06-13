@@ -14,6 +14,10 @@ jobs:
           with:
             creds: ${{ secrets.AZURE_CREDENTIALS }}
         
+        - name: Set image tag
+          id: vars
+          run: echo "IMAGE_TAG=v${{ github.run_number }}" >> $GITHUB_ENV
+
         - name: 'Build and push image'
           uses: azure/docker-login@v1
           with:
@@ -21,5 +25,5 @@ jobs:
             username: ${{ secrets.REGISTRY_USERNAME }}
             password: ${{ secrets.REGISTRY_PASSWORD }}
         - run: |
-            docker build . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/apa-backend:latest
-            docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/apa-backend:latest
+            docker build . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/apa-backend:${{ env.IMAGE_TAG }}
+            docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/apa-backend:${{ env.IMAGE_TAG }}

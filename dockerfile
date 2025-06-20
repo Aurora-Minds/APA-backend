@@ -7,7 +7,7 @@ FROM node:18-alpine
 # Set the working directory in the container
 WORKDIR /usr/src/app
 
-# Copy package files
+# Copy package file
 COPY package*.json ./
 
 # Install dependencies

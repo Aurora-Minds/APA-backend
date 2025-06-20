@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { check, validationResult } = require('express-validator');
 const User = require('../models/User');
+const auth = require('../middleware/auth');
 
 // @route   POST api/auth/register
 // @desc    Register user
@@ -49,7 +50,9 @@ router.post('/register', [
             { expiresIn: '24h' },
             (err, token) => {
                 if (err) throw err;
-                res.json({ token });
+                const userResponse = { ...user._doc };
+                delete userResponse.password;
+                res.json({ token, user: userResponse });
             }
         );
     } catch (err) {
@@ -99,12 +102,24 @@ router.post('/login', [
             { expiresIn },
             (err, token) => {
                 if (err) throw err;
-                res.json({ token });
+                const userResponse = { ...user._doc };
+                delete userResponse.password;
+                res.json({ token, user: userResponse });
             }
         );
     } catch (err) {
         console.error('Error during login:', err.message);
         res.status(500).json({ msg: 'Server error during login' });
+    }
+});
+
+router.get('/', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('-password');
+        res.json({ user });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
     }
 });
 

@@ -8,8 +8,9 @@ dotenv.config();
 
 const app = express();
 
-// ✅ Allow multiple origins from CORS_ORIGIN env variable
-const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || [];
+// ✅ Allow multiple origins from CORS_ORIGIN env variable, trimming spaces
+const allowedOrigins = (process.env.CORS_ORIGIN?.split(',').map(o => o.trim())) || [];
+console.log('Allowed CORS origins:', allowedOrigins);
 
 app.use(cors({
   origin: function (origin, callback) {

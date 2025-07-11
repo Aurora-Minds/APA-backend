@@ -8,11 +8,20 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
+// ✅ Allow multiple origins from CORS_ORIGIN env variable
+const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || [];
+
 app.use(cors({
-  origin: 'https://www.auroraminds.xyz',
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS blocked for origin: ${origin}`));
+    }
+  },
   credentials: true
 }));
+
 app.use(express.json());
 
 // MongoDB Connection
@@ -35,4 +44,4 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/focus-sessions', focusSessionRoutes);
 
 const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`)); 
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

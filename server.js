@@ -1,13 +1,17 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
+const cors = require('cors');
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
 
-// (CORS logic removed; handled by Nginx)
+// Enable CORS
+app.use(cors({
+    exposedHeaders: ['x-auth-token'],
+}));
 
 app.use(express.json());
 

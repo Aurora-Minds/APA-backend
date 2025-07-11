@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { check, validationResult } = require('express-validator');
 const Task = require('../models/Task');
+const User = require('../models/User');
 
 // Middleware to verify JWT token
 const auth = require('../middleware/auth');
@@ -86,6 +87,8 @@ router.put('/:id', [
             return res.status(401).json({ msg: 'Not authorized' });
         }
 
+        const oldStatus = task.status;
+
         // Update only provided fields
         const updateFields = {};
         if (req.body.title) updateFields.title = req.body.title.trim();
@@ -100,6 +103,25 @@ router.put('/:id', [
             { $set: updateFields },
             { new: true, runValidators: true }
         );
+
+        // If task is marked as completed, award XP
+        if (updatedTask.status === 'completed' && oldStatus !== 'completed') {
+            let xpGained = 0;
+            switch (updatedTask.priority) {
+                case 'high':
+                    xpGained = 50;
+                    break;
+                case 'medium':
+                    xpGained = 25;
+                    break;
+                case 'low':
+                    xpGained = 15;
+                    break;
+            }
+            if (xpGained > 0) {
+                await User.findByIdAndUpdate(req.user.id, { $inc: { xp: xpGained } });
+            }
+        }
 
         res.json(updatedTask);
     } catch (err) {
@@ -137,4 +159,4 @@ router.delete('/:id', auth, async (req, res) => {
     }
 });
 
-module.exports = router; 
+module.exports = router;

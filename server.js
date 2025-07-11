@@ -1,17 +1,27 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-const cors = require('cors');
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
 
-// Enable CORS
-app.use(cors({
-    exposedHeaders: ['x-auth-token'],
-}));
+// Custom CORS middleware to avoid conflict with Nginx
+app.use((req, res, next) => {
+  // We don't set Access-Control-Allow-Origin, assuming Nginx does it.
+  // We will set the other required headers.
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-auth-token');
+  res.setHeader('Access-Control-Expose-Headers', 'x-auth-token');
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204); // No Content
+  }
+
+  next();
+});
 
 app.use(express.json());
 

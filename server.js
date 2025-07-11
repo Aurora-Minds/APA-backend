@@ -1,6 +1,5 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
 const dotenv = require('dotenv');
 
 // Load environment variables
@@ -8,23 +7,7 @@ dotenv.config();
 
 const app = express();
 
-// ✅ Allow multiple origins from CORS_ORIGIN env variable, trimming spaces
-const allowedOrigins = (process.env.CORS_ORIGIN?.split(',').map(o => o.trim())) || [];
-console.log('Allowed CORS origins:', allowedOrigins);
-
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.error('Blocked by CORS:', origin);
-      callback(new Error(`CORS blocked for origin: ${origin}`));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+// (CORS logic removed; handled by Nginx)
 
 app.use(express.json());
 

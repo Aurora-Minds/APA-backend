@@ -7,19 +7,22 @@ dotenv.config();
 
 const app = express();
 
-// Custom CORS middleware to avoid conflict with Nginx
+// Custom CORS middleware to supplement Nginx
 app.use((req, res, next) => {
-  // We don't set Access-Control-Allow-Origin, assuming Nginx does it.
-  // We will set the other required headers.
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-auth-token');
-  res.setHeader('Access-Control-Expose-Headers', 'x-auth-token');
+  // Assuming Nginx handles Access-Control-Allow-Origin
+  // We'll add the headers that the application needs
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-auth-token'
+  );
+  res.header('Access-Control-Expose-Headers', 'x-auth-token');
 
-  // Handle preflight requests
+  // Handle preflight OPTIONS requests
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(204); // No Content
+    return res.sendStatus(200);
   }
-
+  
   next();
 });
 

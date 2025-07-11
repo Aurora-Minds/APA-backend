@@ -6,65 +6,76 @@ const User = require('../models/User');
 const auth = require('../middleware/auth');
 
 // @route   POST api/focus-sessions
-// @desc    Create a new focus session
+// @desc    Create a new focus session and award XP
 // @access  Private
-router.post('/', [
+router.post(
+  '/',
+  [
     auth,
     [
-        check('taskId', 'Task ID is required').not().isEmpty(),
-        check('duration', 'Duration is required').isNumeric(),
-        check('xpEarned', 'XP earned is required').isNumeric(),
-        check('status', 'Status must be completed or interrupted').optional().isIn(['completed', 'interrupted']),
-        check('notes', 'Notes must be a string').optional().isString()
-    ]
-], async (req, res) => {
+      check('taskId', 'Task ID is required').not().isEmpty(),
+      check('duration', 'Duration is required and must be in seconds').isNumeric(),
+      check('startedAt', 'Start date is required').isISO8601(),
+      check('endedAt', 'End date is required').isISO8601(),
+      check('status', 'Status must be completed or interrupted').isIn(['completed', 'interrupted']),
+      check('notes', 'Notes must be a string').optional().isString(),
+    ],
+  ],
+  async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+      return res.status(400).json({ errors: errors.array() });
     }
 
     try {
-        const { taskId, duration, xpEarned, status, notes } = req.body;
+      const { taskId, duration, startedAt, endedAt, status, notes } = req.body;
 
-        // Create new focus session
-        const newSession = new FocusSession({
-            user: req.user.id,
-            task: taskId,
-            duration,
-            xpEarned,
-            status: status || 'completed',
-            notes
-        });
+      let xpEarned = 0;
+      // Award 1 XP per minute ONLY for completed focus sessions
+      if (status === 'completed') {
+        xpEarned = Math.floor(duration / 60);
+      }
 
-        // Save the session
-        const session = await newSession.save();
+      const newSession = new FocusSession({
+        user: req.user.id,
+        task: taskId,
+        type: 'focus', // Hardcode type to 'focus' as we are not tracking breaks
+        duration,
+        startedAt,
+        endedAt,
+        status,
+        xpEarned,
+        notes,
+      });
 
-        // Update user's total XP
-        await User.findByIdAndUpdate(
-            req.user.id,
-            { $inc: { xp: xpEarned } }
-        );
+      const session = await newSession.save();
 
-        res.json(session);
+      // If XP was earned, update the user's total XP
+      if (xpEarned > 0) {
+        await User.findByIdAndUpdate(req.user.id, { $inc: { xp: xpEarned } });
+      }
+
+      res.status(201).json(session);
     } catch (err) {
-        console.error('Error creating focus session:', err.message);
-        res.status(500).json({ msg: 'Error creating focus session' });
+      console.error('Error creating focus session:', err.message);
+      res.status(500).json({ msg: 'Server error while creating focus session' });
     }
-});
+  }
+);
 
 // @route   GET api/focus-sessions
-// @desc    Get all focus sessions for a user
+// @desc    Get all focus sessions for the logged-in user
 // @access  Private
 router.get('/', auth, async (req, res) => {
-    try {
-        const sessions = await FocusSession.find({ user: req.user.id })
-            .sort({ completedAt: -1 })
-            .populate('task', 'title subject');
-        res.json(sessions);
-    } catch (err) {
-        console.error('Error fetching focus sessions:', err.message);
-        res.status(500).json({ msg: 'Error fetching focus sessions' });
-    }
+  try {
+    const sessions = await FocusSession.find({ user: req.user.id })
+      .sort({ startedAt: -1 })
+      .populate('task', 'title subject');
+    res.json(sessions);
+  } catch (err) {
+    console.error('Error fetching focus sessions:', err.message);
+    res.status(500).json({ msg: 'Error fetching focus sessions' });
+  }
 });
 
 // @route   GET api/focus-sessions/stats
@@ -121,32 +132,4 @@ router.get('/task/:taskId', auth, async (req, res) => {
     }
 });
 
-// Save a session
-router.post('/', auth, async (req, res) => {
-  try {
-    const { type, duration, startedAt, endedAt } = req.body;
-    const session = new FocusSession({
-      user: req.user.id,
-      type,
-      duration,
-      startedAt,
-      endedAt
-    });
-    await session.save();
-    res.status(201).json(session);
-  } catch (err) {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Get all sessions for the logged-in user
-router.get('/', auth, async (req, res) => {
-  try {
-    const sessions = await FocusSession.find({ user: req.user.id }).sort({ startedAt: -1 });
-    res.json(sessions);
-  } catch (err) {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-module.exports = router; 
+module.exports = router;

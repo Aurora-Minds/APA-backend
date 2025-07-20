@@ -65,51 +65,6 @@ router.get('/chat/history', auth, async (req, res) => {
     }
 });
 
-// @route   POST api/ai/chat/:id
-// @desc    Send a message in an existing chat
-// @access  Private
-router.post('/chat/:id', auth, async (req, res) => {
-    const { message } = req.body;
-    const chatId = req.params.id;
-
-    try {
-        const chat = await Chat.findById(chatId);
-
-        if (!chat) {
-            return res.status(404).json({ msg: 'Chat not found' });
-        }
-
-        if (chat.user.toString() !== req.user.id) {
-            return res.status(401).json({ msg: 'User not authorized' });
-        }
-
-        const userMessage = {
-            role: 'user',
-            content: message
-        };
-
-        chat.messages.push(userMessage);
-
-        const completion = await openaiClient.chat.completions.create({
-            messages: chat.messages.map(m => ({ role: m.role, content: m.content })),
-            model: "gpt-3.5-turbo",
-        });
-
-        const assistantMessage = {
-            role: 'assistant',
-            content: completion.choices[0].message.content
-        };
-
-        chat.messages.push(assistantMessage);
-        await chat.save();
-
-        res.json(chat);
-    } catch (err) {
-        console.error('Error with OpenAI chat completion:', err);
-        res.status(500).send('Server Error');
-    }
-});
-
 // @route   POST api/ai/chat/upload
 // @desc    Create a new chat session from a PDF
 // @access  Private
@@ -152,6 +107,51 @@ router.post('/chat/upload', [auth, upload.single('file')], async (req, res) => {
                 messages: [initialMessage]
             });
         }
+
+        const completion = await openaiClient.chat.completions.create({
+            messages: chat.messages.map(m => ({ role: m.role, content: m.content })),
+            model: "gpt-3.5-turbo",
+        });
+
+        const assistantMessage = {
+            role: 'assistant',
+            content: completion.choices[0].message.content
+        };
+
+        chat.messages.push(assistantMessage);
+        await chat.save();
+
+        res.json(chat);
+    } catch (err) {
+        console.error('Error with OpenAI chat completion:', err);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   POST api/ai/chat/:id
+// @desc    Send a message in an existing chat
+// @access  Private
+router.post('/chat/:id', auth, async (req, res) => {
+    const { message } = req.body;
+    const chatId = req.params.id;
+
+    try {
+        const chat = await Chat.findById(chatId);
+
+        if (!chat) {
+            return res.status(404).json({ msg: 'Chat not found' });
+        }
+
+        if (chat.user.toString() !== req.user.id) {
+            return res.status(401).json({ msg: 'User not authorized' });
+        }
+
+        const userMessage = {
+            role: 'user',
+            content: message
+        };
+
+        chat.messages.push(userMessage);
 
         const completion = await openaiClient.chat.completions.create({
             messages: chat.messages.map(m => ({ role: m.role, content: m.content })),

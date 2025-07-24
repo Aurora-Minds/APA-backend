@@ -31,9 +31,9 @@ router.post(
       const { taskId, duration, startedAt, endedAt, status, notes } = req.body;
 
       let xpEarned = 0;
-      // Award 1 XP per minute ONLY for completed focus sessions
+      // Award 10 XP for completed focus sessions (when timer runs out)
       if (status === 'completed') {
-        xpEarned = Math.floor(duration / 60);
+        xpEarned = 10;
       }
 
       const newSession = new FocusSession({

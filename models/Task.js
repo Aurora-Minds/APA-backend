@@ -10,6 +10,11 @@ const taskSchema = new mongoose.Schema({
         type: String,
         trim: true
     },
+    taskType: {
+        type: String,
+        enum: ['lab', 'assignment', 'project'],
+        trim: true
+    },
     description: {
         type: String,
         trim: true

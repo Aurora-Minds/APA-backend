@@ -8,9 +8,19 @@ const pdf = require('pdf-parse');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-const openaiClient = new openai({
-    apiKey: process.env.OPENAI_API_KEY
-});
+// Initialize OpenAI client lazily to ensure environment variables are loaded
+let openaiClient = null;
+const getOpenAIClient = () => {
+    if (!openaiClient) {
+        if (!process.env.OPENAI_API_KEY) {
+            throw new Error('OPENAI_API_KEY environment variable is not set');
+        }
+        openaiClient = new openai({
+            apiKey: process.env.OPENAI_API_KEY
+        });
+    }
+    return openaiClient;
+};
 
 // @route   POST api/ai/chat
 // @desc    Create a new chat session
@@ -32,7 +42,7 @@ router.post('/chat', auth, async (req, res) => {
 
         const chat = await newChat.save();
 
-        const completion = await openaiClient.chat.completions.create({
+        const completion = await getOpenAIClient().chat.completions.create({
             messages: [{ role: "system", content: "You are a helpful assistant for students with their lab assignments." }, { role: "user", content: message }],
             model: "gpt-3.5-turbo",
         });
@@ -108,7 +118,7 @@ router.post('/chat/upload', [auth, upload.single('file')], async (req, res) => {
             });
         }
 
-        const completion = await openaiClient.chat.completions.create({
+        const completion = await getOpenAIClient().chat.completions.create({
             messages: chat.messages.map(m => ({ role: m.role, content: m.content })),
             model: "gpt-3.5-turbo",
         });
@@ -153,7 +163,7 @@ router.post('/chat/:id', auth, async (req, res) => {
 
         chat.messages.push(userMessage);
 
-        const completion = await openaiClient.chat.completions.create({
+        const completion = await getOpenAIClient().chat.completions.create({
             messages: chat.messages.map(m => ({ role: m.role, content: m.content })),
             model: "gpt-3.5-turbo",
         });

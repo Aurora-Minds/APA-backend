@@ -57,6 +57,9 @@ const userSchema = new mongoose.Schema({
     xp: {
         type: Number,
         default: 0
+    },
+    googleRefreshToken: {
+        type: String
     }
 });
 

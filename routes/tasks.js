@@ -3,9 +3,21 @@ const router = express.Router();
 const { check, validationResult } = require('express-validator');
 const Task = require('../models/Task');
 const User = require('../models/User');
+const { google } = require('googleapis');
 
 // Middleware to verify JWT token
 const auth = require('../middleware/auth');
+
+// Function to get an authenticated OAuth2 client
+const getOauth2Client = (refreshToken) => {
+    const oauth2Client = new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        process.env.GOOGLE_REDIRECT_URI
+    );
+    oauth2Client.setCredentials({ refresh_token: refreshToken });
+    return oauth2Client;
+};
 
 // @route   GET api/tasks
 // @desc    Get all tasks for a user
@@ -107,6 +119,36 @@ router.post('/', [
         
         if (xpGained > 0) {
             await User.findByIdAndUpdate(req.user.id, { $inc: { xp: xpGained } });
+        }
+
+        // Google Calendar integration
+        const user = await User.findById(req.user.id);
+        if (user.googleRefreshToken) {
+            try {
+                const oauth2Client = getOauth2Client(user.googleRefreshToken);
+                const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+                const event = {
+                    summary: task.title,
+                    description: task.description,
+                    start: {
+                        dateTime: task.dueDate,
+                        timeZone: 'America/Toronto',
+                    },
+                    end: {
+                        dateTime: task.dueDate, // Assuming a default duration
+                        timeZone: 'America/Toronto',
+                    },
+                };
+
+                await calendar.events.insert({
+                    calendarId: 'primary',
+                    resource: event,
+                });
+            } catch (err) {
+                console.error('Error creating Google Calendar event:', err);
+                // Don't block task creation if calendar event fails
+            }
         }
         
         res.json(task);

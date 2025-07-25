@@ -71,30 +71,15 @@ router.post('/', [
     }
 
     try {
-        // Handle date properly to avoid timezone issues
-        let dueDate = req.body.dueDate;
-        console.log('Backend received dueDate:', dueDate);
-        
-        if (dueDate) {
-            if (!dueDate.includes('T')) {
-                // If it's just a date string (YYYY-MM-DD), add time to make it local midnight
-                dueDate = dueDate + 'T00:00:00.000Z';
-                console.log('Backend processed date-only:', dueDate);
-            } else {
-                // If it includes time, just store it as-is without timezone conversion
-                // The frontend will handle the timezone display
-                dueDate = dueDate + 'Z'; // Add Z to make it ISO format
-                console.log('Backend processed date+time:', dueDate);
-            }
-        }
+        const { title, subject, taskType, description, dueDate, priority } = req.body;
 
         const newTask = new Task({
-            title: req.body.title.trim(),
-            subject: req.body.subject.trim(),
-            taskType: req.body.taskType?.trim(),
-            description: req.body.description?.trim(),
-            dueDate: dueDate,
-            priority: req.body.priority || 'medium',
+            title: title.trim(),
+            subject: subject.trim(),
+            taskType: taskType?.trim(),
+            description: description?.trim(),
+            dueDate: dueDate, // Directly use the ISO string from the frontend
+            priority: priority || 'medium',
             user: req.user.id
         });
 

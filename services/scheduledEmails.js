@@ -50,7 +50,7 @@ const scheduleDailyDigest = () => {
           const upcomingTasks = await Task.find({
             user: user._id,
             dueDate: { $gte: today, $lte: threeDaysFromNow },
-            completed: false
+            status: { $ne: 'completed' }
           }).limit(5);
           
           // Send daily digest
@@ -97,7 +97,7 @@ const scheduleWeeklyReport = () => {
           // Get last week's completed tasks
           const completedTasks = await Task.find({
             user: user._id,
-            completed: true,
+            status: 'completed',
             completedAt: { $gte: lastWeek, $lte: now }
           });
           
@@ -155,7 +155,7 @@ const scheduleTaskReminders = () => {
           const dueTasks = await Task.find({
             user: user._id,
             dueDate: { $gte: now, $lte: tomorrow },
-            completed: false
+            status: { $ne: 'completed' }
           });
           
           // Send reminders for each due task

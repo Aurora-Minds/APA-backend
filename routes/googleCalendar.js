@@ -118,7 +118,7 @@ router.post('/sync-all-tasks', auth, async (req, res) => {
   try {
     const tasks = await Task.find({ 
       user: req.user.id, 
-      completed: false,
+      status: { $ne: 'completed' },
       dueDate: { $exists: true }
     });
 

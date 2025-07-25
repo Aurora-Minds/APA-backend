@@ -13,40 +13,56 @@ passport.use(new GitHubStrategy({
   },
   async function(accessToken, refreshToken, profile, done) {
     try {
+      console.log('GitHub OAuth profile:', {
+        id: profile.id,
+        username: profile.username,
+        displayName: profile.displayName,
+        emails: profile.emails ? profile.emails.length : 0,
+        photos: profile.photos ? profile.photos.length : 0
+      });
+      
       // Check if user already exists
       let user = await User.findOne({ githubId: profile.id });
       
       if (user) {
         // User exists, update profile info
         user.githubUsername = profile.username;
-        user.githubAvatar = profile.photos[0]?.value;
+        user.githubAvatar = profile.photos && profile.photos.length > 0 ? profile.photos[0].value : null;
         user.name = profile.displayName || profile.username;
         await user.save();
         return done(null, user);
       }
       
-      // Check if user exists with same email
-      user = await User.findOne({ email: profile.emails[0]?.value });
-      
-      if (user) {
-        // Link GitHub account to existing user
-        user.githubId = profile.id;
-        user.githubUsername = profile.username;
-        user.githubAvatar = profile.photos[0]?.value;
-        user.provider = 'github';
-        await user.save();
-        return done(null, user);
+      // Check if user exists with same email (only if email exists)
+      if (profile.emails && profile.emails.length > 0) {
+        user = await User.findOne({ email: profile.emails[0].value });
+        
+        if (user) {
+          // Link GitHub account to existing user
+          user.githubId = profile.id;
+          user.githubUsername = profile.username;
+          user.githubAvatar = profile.photos && profile.photos.length > 0 ? profile.photos[0].value : null;
+          user.provider = 'github';
+          await user.save();
+          return done(null, user);
+        }
       }
       
       // Create new user
-      user = new User({
-        email: profile.emails[0]?.value,
+      const userData = {
         name: profile.displayName || profile.username,
         githubId: profile.id,
         githubUsername: profile.username,
-        githubAvatar: profile.photos[0]?.value,
+        githubAvatar: profile.photos && profile.photos.length > 0 ? profile.photos[0].value : null,
         provider: 'github'
-      });
+      };
+      
+      // Add email if available
+      if (profile.emails && profile.emails.length > 0) {
+        userData.email = profile.emails[0].value;
+      }
+      
+      user = new User(userData);
       
       await user.save();
       return done(null, user);

@@ -11,19 +11,7 @@ const app = express();
 
 // No CORS middleware - handled by Nginx
 
-// Redis client setup
-const redis = require('redis');
-const RedisStore = require('connect-redis').default;
-
-// Create Redis client
-const redisClient = redis.createClient({
-  url: process.env.REDIS_URL || 'redis://localhost:6379'
-});
-
-// Connect to Redis
-redisClient.connect().catch(console.error);
-
-// Session middleware (required for passport)
+// Session middleware (required for passport) - without Redis for now
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your-session-secret',
   resave: false,
@@ -31,8 +19,8 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  },
-  store: new RedisStore({ client: redisClient })
+  }
+  // Temporarily remove Redis store to fix the startup issue
 }));
 
 // Initialize passport

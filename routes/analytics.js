@@ -57,7 +57,7 @@ router.get('/focus-summary', auth, async (req, res) => {
     const totalHours = Math.round(totalTime / 3600 * 10) / 10;
     
     // Calculate task completion metrics
-    const completedTasks = tasks.filter(task => task.completed).length;
+    const completedTasks = tasks.filter(task => task.status === 'completed').length;
     const totalTasks = tasks.length;
     const taskCompletionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
     
@@ -137,7 +137,7 @@ router.get('/productivity-insights', auth, async (req, res) => {
     
     // Calculate insights
     const totalFocusTime = focusSessions.reduce((total, session) => total + (session.duration || 0), 0);
-    const completedTasks = tasks.filter(task => task.completed).length;
+    const completedTasks = tasks.filter(task => task.status === 'completed').length;
     const totalTasks = tasks.length;
     const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
     

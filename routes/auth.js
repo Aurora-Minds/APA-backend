@@ -47,7 +47,7 @@ router.get('/google/callback', async (req, res) => {
         }
 
         // Redirect to settings page with success message
-        res.redirect('/settings?google_auth=success');
+        res.redirect('https://www.auroraminds.xyz/settings?google_auth=success');
     } catch (err) {
         console.error('Error with Google OAuth2 callback:', err);
         res.redirect('/settings?google_auth=error');

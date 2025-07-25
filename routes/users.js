@@ -23,6 +23,7 @@ router.put('/me', [
   auth,
   [
     check('name', 'Name is required').optional().not().isEmpty().trim(),
+    check('email', 'Please include a valid email').optional().isEmail(),
     check('password', 'Password must be at least 6 characters').optional().isLength({ min: 6 })
   ]
 ], async (req, res) => {
@@ -34,6 +35,7 @@ router.put('/me', [
   try {
     const updateFields = {};
     if (req.body.name) updateFields.name = req.body.name.trim();
+    if (req.body.email) updateFields.email = req.body.email.trim().toLowerCase();
     if (req.body.password) {
       const salt = await bcrypt.genSalt(10);
       updateFields.password = await bcrypt.hash(req.body.password, salt);
@@ -54,6 +56,9 @@ router.put('/me', [
     console.error('Error updating user:', err.message);
     if (err.name === 'ValidationError') {
       return res.status(400).json({ msg: 'Invalid user data provided' });
+    }
+    if (err.code === 11000) {
+      return res.status(400).json({ msg: 'Email address already exists' });
     }
     res.status(500).json({ msg: 'Error updating user profile. Please try again later.' });
   }

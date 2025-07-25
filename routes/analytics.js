@@ -38,17 +38,28 @@ router.get('/focus-summary', auth, async (req, res) => {
         endDate = now;
     }
     
-    // Get focus sessions for the period
-    const focusSessions = await FocusSession.find({
-      user: userId,
-      startTime: { $gte: startDate, $lte: endDate }
-    }).sort({ startTime: 1 });
+    // Get focus sessions and tasks for the period
+    const [focusSessions, tasks] = await Promise.all([
+      FocusSession.find({
+        user: userId,
+        startTime: { $gte: startDate, $lte: endDate }
+      }).sort({ startTime: 1 }),
+      Task.find({
+        user: userId,
+        createdAt: { $gte: startDate, $lte: endDate }
+      })
+    ]);
     
     // Calculate analytics
     const totalSessions = focusSessions.length;
     const totalTime = focusSessions.reduce((total, session) => total + (session.duration || 0), 0);
     const avgSessionLength = totalSessions > 0 ? Math.round(totalTime / totalSessions / 60) : 0;
     const totalHours = Math.round(totalTime / 3600 * 10) / 10;
+    
+    // Calculate task completion metrics
+    const completedTasks = tasks.filter(task => task.completed).length;
+    const totalTasks = tasks.length;
+    const taskCompletionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
     
     // Daily breakdown
     const dailyStats = {};
@@ -70,11 +81,11 @@ router.get('/focus-summary', auth, async (req, res) => {
       time: Math.round(stats.time / 60) // Convert to minutes
     }));
     
-    // Productivity score (based on consistency and total time)
+    // Productivity score (based on consistency, total time, and task completion)
     const daysWithSessions = Object.keys(dailyStats).length;
     const expectedDays = period === 'today' ? 1 : period === 'week' ? 7 : 30;
     const consistencyScore = Math.round((daysWithSessions / expectedDays) * 100);
-    const productivityScore = Math.min(100, Math.round((consistencyScore + (totalHours * 10)) / 2));
+    const productivityScore = Math.min(100, Math.round((consistencyScore + (totalHours * 10) + taskCompletionRate) / 3));
     
     res.json({
       period,
@@ -84,7 +95,10 @@ router.get('/focus-summary', auth, async (req, res) => {
         totalHours,
         avgSessionLength,
         productivityScore,
-        consistencyScore
+        consistencyScore,
+        completedTasks,
+        totalTasks,
+        taskCompletionRate
       },
       dailyBreakdown,
       focusSessions: focusSessions.map(session => ({

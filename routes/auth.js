@@ -27,7 +27,7 @@ router.get('/google', auth, (req, res) => {
     scope: scopes,
     state: req.user.id // Pass user ID in state to associate tokens with user
   });
-  res.redirect(url);
+  res.json({ url });
 });
 
 // @route   GET api/auth/google/callback

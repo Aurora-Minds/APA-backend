@@ -44,13 +44,15 @@ router.get('/focus-summary', auth, async (req, res) => {
         endDate = now;
     }
     
-    // Get all focus sessions and tasks (all-time data for consistency)
+    // Get focus sessions and tasks for the specific period
     const [focusSessions, tasks] = await Promise.all([
       FocusSession.find({
-        user: userId
+        user: userId,
+        startTime: { $gte: startDate, $lte: endDate }
       }).sort({ startTime: 1 }),
       Task.find({
-        user: userId
+        user: userId,
+        createdAt: { $gte: startDate, $lte: endDate }
       })
     ]);
     
@@ -87,20 +89,40 @@ router.get('/focus-summary', auth, async (req, res) => {
     
     // Productivity score (based on consistency, total time, and task completion)
     const daysWithSessions = Object.keys(dailyStats).length;
-    // For all-time data, calculate consistency based on total days since first session
-    const firstSession = focusSessions.length > 0 ? focusSessions[0].startTime : new Date();
-    const totalDays = Math.max(1, Math.ceil((now - firstSession) / (1000 * 60 * 60 * 24)));
-    const consistencyScore = Math.round((daysWithSessions / totalDays) * 100);
+    
+    // Calculate consistency based on the selected period
+    let expectedDays;
+    switch (period) {
+      case 'today':
+        expectedDays = 1;
+        break;
+      case 'week':
+        expectedDays = 7;
+        break;
+      case 'month':
+        expectedDays = 30;
+        break;
+      default:
+        expectedDays = 7;
+    }
+    
+    const consistencyScore = Math.round((daysWithSessions / expectedDays) * 100);
     
     // Ensure all values are valid numbers before calculation
     const validConsistencyScore = isNaN(consistencyScore) ? 0 : consistencyScore;
     const validTotalHours = isNaN(totalHours) ? 0 : totalHours;
     const validTaskCompletionRate = isNaN(taskCompletionRate) ? 0 : taskCompletionRate;
     
-    const productivityScore = Math.min(100, Math.max(0, Math.round((validConsistencyScore + (validTotalHours * 10) + validTaskCompletionRate) / 3)));
+    // Weight the productivity calculation more heavily towards task completion
+    const productivityScore = Math.min(100, Math.max(0, Math.round(
+      (validConsistencyScore * 0.3) + (validTotalHours * 5) + (validTaskCompletionRate * 0.7)
+    )));
     
     // Debug logging
     console.log('Analytics Debug:', {
+      period,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
       totalSessions,
       totalTime: Math.round(totalTime / 60),
       totalHours,
@@ -108,9 +130,11 @@ router.get('/focus-summary', auth, async (req, res) => {
       totalTasks,
       taskCompletionRate,
       daysWithSessions,
-      totalDays,
+      expectedDays,
       consistencyScore,
-      productivityScore
+      productivityScore,
+      focusSessionsCount: focusSessions.length,
+      tasksCount: tasks.length
     });
     
     res.json({

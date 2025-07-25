@@ -274,4 +274,45 @@ router.delete('/:id', auth, async (req, res) => {
     }
 });
 
+// @route   GET api/tasks/notifications
+// @desc    Get tasks due soon for notifications
+// @access  Private
+router.get('/notifications', auth, async (req, res) => {
+    try {
+        const now = new Date();
+        const oneHourFromNow = new Date(now.getTime() + (60 * 60 * 1000)); // 1 hour from now
+        const thirtyMinutesAgo = new Date(now.getTime() - (30 * 60 * 1000)); // 30 minutes ago
+
+        // Find tasks that are due within the next hour and haven't been completed
+        const tasksDueSoon = await Task.find({
+            user: req.user.id,
+            status: { $ne: 'completed' },
+            dueDate: {
+                $gte: now,
+                $lte: oneHourFromNow
+            }
+        }).sort({ dueDate: 1 });
+
+        // Format the response
+        const notifications = tasksDueSoon.map(task => {
+            const dueDate = new Date(task.dueDate);
+            const timeDiff = dueDate.getTime() - now.getTime();
+            const hoursDiff = timeDiff / (1000 * 60 * 60);
+            
+            return {
+                taskId: task._id,
+                title: task.title,
+                dueDate: task.dueDate,
+                hoursUntilDue: Math.round(hoursDiff * 100) / 100,
+                message: `"${task.title}" is due in about ${Math.round(hoursDiff * 100) / 100} hours`
+            };
+        });
+
+        res.json(notifications);
+    } catch (err) {
+        console.error('Error fetching notifications:', err.message);
+        res.status(500).json({ msg: 'Error fetching notifications' });
+    }
+});
+
 module.exports = router;

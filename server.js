@@ -3,13 +3,22 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const passport = require('passport');
 const session = require('express-session');
+const cors = require('cors');
 
-// Load environment variables
+// Load environment variables FIRST, before any other imports
 dotenv.config();
 
 const app = express();
 
-// No CORS middleware - handled by Nginx
+// CORS middleware for development
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://www.auroraminds.xyz', 'https://auroraminds.xyz']
+    : ['http://localhost:3000', 'http://localhost:3001'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token']
+}));
 
 // Session middleware (required for passport) - without Redis for now
 app.use(session({

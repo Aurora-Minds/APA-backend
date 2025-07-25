@@ -19,7 +19,10 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
+  },
+  store: new (require('connect-redis'))(require('redis').createClient({
+    url: process.env.REDIS_URL || 'redis://localhost:6379'
+  }))
 }));
 
 // Initialize passport
@@ -46,6 +49,7 @@ const aiRoutes = require('./routes/ai');
 const githubAuthRoutes = require('./routes/githubAuth');
 const emailReminderRoutes = require('./routes/emailReminders');
 const analyticsRoutes = require('./routes/analytics');
+const googleCalendarRoutes = require('./routes/googleCalendar');
 
 app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
@@ -56,6 +60,7 @@ app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/email-reminders', emailReminderRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/google-calendar', googleCalendarRoutes);
 
 const PORT = process.env.PORT || 5001;
 

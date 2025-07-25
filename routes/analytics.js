@@ -91,7 +91,27 @@ router.get('/focus-summary', auth, async (req, res) => {
     const firstSession = focusSessions.length > 0 ? focusSessions[0].startTime : new Date();
     const totalDays = Math.max(1, Math.ceil((now - firstSession) / (1000 * 60 * 60 * 24)));
     const consistencyScore = Math.round((daysWithSessions / totalDays) * 100);
-    const productivityScore = Math.min(100, Math.round((consistencyScore + (totalHours * 10) + taskCompletionRate) / 3));
+    
+    // Ensure all values are valid numbers before calculation
+    const validConsistencyScore = isNaN(consistencyScore) ? 0 : consistencyScore;
+    const validTotalHours = isNaN(totalHours) ? 0 : totalHours;
+    const validTaskCompletionRate = isNaN(taskCompletionRate) ? 0 : taskCompletionRate;
+    
+    const productivityScore = Math.min(100, Math.max(0, Math.round((validConsistencyScore + (validTotalHours * 10) + validTaskCompletionRate) / 3)));
+    
+    // Debug logging
+    console.log('Analytics Debug:', {
+      totalSessions,
+      totalTime: Math.round(totalTime / 60),
+      totalHours,
+      completedTasks,
+      totalTasks,
+      taskCompletionRate,
+      daysWithSessions,
+      totalDays,
+      consistencyScore,
+      productivityScore
+    });
     
     res.json({
       period,

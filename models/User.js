@@ -10,12 +10,33 @@ const userSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: true
+        required: function() {
+            return !this.githubId; // Password only required if not GitHub OAuth
+        }
     },
     name: {
         type: String,
         required: true,
         trim: true
+    },
+    // GitHub OAuth fields
+    githubId: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
+    githubUsername: {
+        type: String,
+        trim: true
+    },
+    githubAvatar: {
+        type: String
+    },
+    // OAuth provider
+    provider: {
+        type: String,
+        enum: ['local', 'github'],
+        default: 'local'
     },
     createdAt: {
         type: Date,

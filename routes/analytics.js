@@ -53,12 +53,14 @@ router.get('/focus-summary', auth, async (req, res) => {
     // Daily breakdown
     const dailyStats = {};
     focusSessions.forEach(session => {
-      const date = session.startTime.toDateString();
-      if (!dailyStats[date]) {
-        dailyStats[date] = { sessions: 0, time: 0 };
+      if (session.startTime) {
+        const date = session.startTime.toDateString();
+        if (!dailyStats[date]) {
+          dailyStats[date] = { sessions: 0, time: 0 };
+        }
+        dailyStats[date].sessions += 1;
+        dailyStats[date].time += session.duration || 0;
       }
-      dailyStats[date].sessions += 1;
-      dailyStats[date].time += session.duration || 0;
     });
     
     // Convert to array format for frontend
@@ -128,12 +130,14 @@ router.get('/productivity-insights', auth, async (req, res) => {
     // Best study times
     const hourlyStats = {};
     focusSessions.forEach(session => {
-      const hour = session.startTime.getHours();
-      if (!hourlyStats[hour]) {
-        hourlyStats[hour] = { sessions: 0, totalTime: 0 };
+      if (session.startTime) {
+        const hour = session.startTime.getHours();
+        if (!hourlyStats[hour]) {
+          hourlyStats[hour] = { sessions: 0, totalTime: 0 };
+        }
+        hourlyStats[hour].sessions += 1;
+        hourlyStats[hour].totalTime += session.duration || 0;
       }
-      hourlyStats[hour].sessions += 1;
-      hourlyStats[hour].totalTime += session.duration || 0;
     });
     
     const bestHours = Object.entries(hourlyStats)
@@ -237,11 +241,13 @@ router.get('/streak', auth, async (req, res) => {
     // Group sessions by date
     const sessionsByDate = {};
     focusSessions.forEach(session => {
-      const date = session.startTime.toDateString();
-      if (!sessionsByDate[date]) {
-        sessionsByDate[date] = [];
+      if (session.startTime) {
+        const date = session.startTime.toDateString();
+        if (!sessionsByDate[date]) {
+          sessionsByDate[date] = [];
+        }
+        sessionsByDate[date].push(session);
       }
-      sessionsByDate[date].push(session);
     });
     
     // Calculate streaks

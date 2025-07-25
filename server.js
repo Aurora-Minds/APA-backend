@@ -1,15 +1,13 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-const cors = require('cors');
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
 
-// (CORS logic removed; handled by Nginx)
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+// No CORS middleware - handled by Nginx
 
 app.use(express.json());
 

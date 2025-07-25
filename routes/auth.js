@@ -5,6 +5,54 @@ const jwt = require('jsonwebtoken');
 const { check, validationResult } = require('express-validator');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const { google } = require('googleapis');
+
+// Google OAuth2 setup
+const oauth2Client = new google.auth.OAuth2(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.GOOGLE_REDIRECT_URI
+);
+
+const scopes = [
+  'https://www.googleapis.com/auth/calendar.events'
+];
+
+// @route   GET api/auth/google
+// @desc    Initiate Google OAuth2 flow
+// @access  Private
+router.get('/google', auth, (req, res) => {
+  const url = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: scopes,
+    state: req.user.id // Pass user ID in state to associate tokens with user
+  });
+  res.json({ url });
+});
+
+// @route   GET api/auth/google/callback
+// @desc    Google OAuth2 callback
+// @access  Public
+router.get('/google/callback', async (req, res) => {
+    const { code, state } = req.query;
+    try {
+        const { tokens } = await oauth2Client.getToken(code);
+        oauth2Client.setCredentials(tokens);
+
+        // Find user by ID from state and save refresh token
+        const user = await User.findById(state);
+        if (user) {
+            user.googleRefreshToken = tokens.refresh_token;
+            await user.save();
+        }
+
+        // Redirect to settings page with success message
+        res.redirect('https://www.auroraminds.xyz/settings?google_auth=success');
+    } catch (err) {
+        console.error('Error with Google OAuth2 callback:', err);
+        res.redirect('/settings?google_auth=error');
+    }
+});
 
 // @route   POST api/auth/register
 // @desc    Register user

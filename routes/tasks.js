@@ -3,9 +3,21 @@ const router = express.Router();
 const { check, validationResult } = require('express-validator');
 const Task = require('../models/Task');
 const User = require('../models/User');
+const { google } = require('googleapis');
 
 // Middleware to verify JWT token
 const auth = require('../middleware/auth');
+
+// Function to get an authenticated OAuth2 client
+const getOauth2Client = (refreshToken) => {
+    const oauth2Client = new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        process.env.GOOGLE_REDIRECT_URI
+    );
+    oauth2Client.setCredentials({ refresh_token: refreshToken });
+    return oauth2Client;
+};
 
 // @route   GET api/tasks
 // @desc    Get all tasks for a user
@@ -59,30 +71,15 @@ router.post('/', [
     }
 
     try {
-        // Handle date properly to avoid timezone issues
-        let dueDate = req.body.dueDate;
-        console.log('Backend received dueDate:', dueDate);
-        
-        if (dueDate) {
-            if (!dueDate.includes('T')) {
-                // If it's just a date string (YYYY-MM-DD), add time to make it local midnight
-                dueDate = dueDate + 'T00:00:00.000Z';
-                console.log('Backend processed date-only:', dueDate);
-            } else {
-                // If it includes time, just store it as-is without timezone conversion
-                // The frontend will handle the timezone display
-                dueDate = dueDate + 'Z'; // Add Z to make it ISO format
-                console.log('Backend processed date+time:', dueDate);
-            }
-        }
+        const { title, subject, taskType, description, dueDate, priority } = req.body;
 
         const newTask = new Task({
-            title: req.body.title.trim(),
-            subject: req.body.subject.trim(),
-            taskType: req.body.taskType?.trim(),
-            description: req.body.description?.trim(),
-            dueDate: dueDate,
-            priority: req.body.priority || 'medium',
+            title: title.trim(),
+            subject: subject.trim(),
+            taskType: taskType?.trim(),
+            description: description?.trim(),
+            dueDate: dueDate, // Directly use the ISO string from the frontend
+            priority: priority || 'medium',
             user: req.user.id
         });
 
@@ -107,6 +104,44 @@ router.post('/', [
         
         if (xpGained > 0) {
             await User.findByIdAndUpdate(req.user.id, { $inc: { xp: xpGained } });
+        }
+
+        // Google Calendar integration
+        const user = await User.findById(req.user.id);
+        if (user.googleRefreshToken) {
+            console.log('Found Google Refresh Token for user:', user.email);
+            try {
+                const oauth2Client = getOauth2Client(user.googleRefreshToken);
+                const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+                const event = {
+                    summary: task.title,
+                    description: task.description,
+                    start: {
+                        dateTime: task.dueDate,
+                        timeZone: 'America/Toronto',
+                    },
+                    end: {
+                        dateTime: task.dueDate, // Assuming a default duration
+                        timeZone: 'America/Toronto',
+                    },
+                };
+
+                console.log('Creating Google Calendar event with data:', JSON.stringify(event, null, 2));
+
+                await calendar.events.insert({
+                    calendarId: 'primary',
+                    resource: event,
+                });
+
+                console.log('Successfully created Google Calendar event.');
+
+            } catch (err) {
+                console.error('Error creating Google Calendar event:', err.response ? err.response.data : err.message);
+                // Don't block task creation if calendar event fails
+            }
+        } else {
+            console.log('No Google Refresh Token found for this user.');
         }
         
         res.json(task);

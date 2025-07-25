@@ -4,7 +4,7 @@ const auth = require('../middleware/auth');
 const User = require('../models/User');
 const Task = require('../models/Task');
 const FocusSession = require('../models/FocusSession');
-const { sendTaskReminder, sendDailyDigest, sendWeeklyReport } = require('../services/emailService');
+const { sendEmail, sendTaskReminder, sendDailyDigest, sendWeeklyReport } = require('../services/emailService');
 
 // @route   GET api/email-reminders/preferences
 // @desc    Get user's email notification preferences

@@ -124,6 +124,7 @@ router.post('/', [
         // Google Calendar integration
         const user = await User.findById(req.user.id);
         if (user.googleRefreshToken) {
+            console.log('Found Google Refresh Token for user:', user.email);
             try {
                 const oauth2Client = getOauth2Client(user.googleRefreshToken);
                 const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
@@ -141,14 +142,21 @@ router.post('/', [
                     },
                 };
 
+                console.log('Creating Google Calendar event with data:', JSON.stringify(event, null, 2));
+
                 await calendar.events.insert({
                     calendarId: 'primary',
                     resource: event,
                 });
+
+                console.log('Successfully created Google Calendar event.');
+
             } catch (err) {
-                console.error('Error creating Google Calendar event:', err);
+                console.error('Error creating Google Calendar event:', err.response ? err.response.data : err.message);
                 // Don't block task creation if calendar event fails
             }
+        } else {
+            console.log('No Google Refresh Token found for this user.');
         }
         
         res.json(task);

@@ -58,6 +58,25 @@ const userSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    // Email notification preferences
+    emailNotifications: {
+        taskReminders: {
+            type: Boolean,
+            default: true
+        },
+        dailyDigest: {
+            type: Boolean,
+            default: false
+        },
+        weeklyReport: {
+            type: Boolean,
+            default: true
+        },
+        reminderTime: {
+            type: String,
+            default: '09:00'
+        }
+    },
     googleRefreshToken: {
         type: String
     }

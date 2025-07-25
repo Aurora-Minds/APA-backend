@@ -87,7 +87,7 @@ router.get('/github/callback',
     );
     
     // Redirect to frontend with token
-    res.redirect(`https://auroraminds.xyz/auth-callback?token=${token}&success=true`);
+    res.redirect(`https://www.auroraminds.xyz/auth-callback?token=${token}&success=true`);
   }
 );
 

@@ -11,7 +11,7 @@ module.exports = function(req, res, next) {
 
     // Verify token
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'aurora-minds-jwt-secret-2024');
         if (!decoded.user || !decoded.user.id) {
             return res.status(401).json({ msg: 'Invalid token format' });
         }

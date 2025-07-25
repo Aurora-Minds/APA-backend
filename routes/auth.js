@@ -46,7 +46,7 @@ router.post('/register', [
 
         jwt.sign(
             payload,
-            process.env.JWT_SECRET || 'your-secret-key',
+            process.env.JWT_SECRET || 'aurora-minds-jwt-secret-2024',
             { expiresIn: '24h' },
             (err, token) => {
                 if (err) throw err;
@@ -98,7 +98,7 @@ router.post('/login', [
 
         jwt.sign(
             payload,
-            process.env.JWT_SECRET || 'your-secret-key',
+            process.env.JWT_SECRET || 'aurora-minds-jwt-secret-2024',
             { expiresIn },
             (err, token) => {
                 if (err) throw err;

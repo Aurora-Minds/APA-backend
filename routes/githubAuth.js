@@ -95,15 +95,28 @@ router.get('/github',
 router.get('/github/callback', 
   passport.authenticate('github', { failureRedirect: '/login' }),
   (req, res) => {
-    // Successful authentication, redirect to frontend with token
-    const token = jwt.sign(
-      { userId: req.user._id },
-      process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '7d' }
-    );
-    
-    // Redirect to frontend with token
-    res.redirect(`https://www.auroraminds.xyz/auth-callback?token=${token}&success=true`);
+    try {
+      // Successful authentication, redirect to frontend with token
+      const payload = {
+        user: {
+          id: req.user._id
+        }
+      };
+      
+      const token = jwt.sign(
+        payload,
+        process.env.JWT_SECRET || 'aurora-minds-jwt-secret-2024',
+        { expiresIn: '7d' }
+      );
+      
+      console.log('GitHub OAuth successful for user:', req.user._id);
+      
+      // Redirect to frontend with token
+      res.redirect(`https://www.auroraminds.xyz/auth-callback?token=${token}&success=true`);
+    } catch (error) {
+      console.error('Error in GitHub callback:', error);
+      res.redirect(`https://www.auroraminds.xyz/login?error=oauth_failed`);
+    }
   }
 );
 

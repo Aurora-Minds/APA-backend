@@ -287,9 +287,46 @@ router.get('/productivity-insights', auth, async (req, res) => {
 router.get('/streak', auth, async (req, res) => {
   try {
     const userId = req.user.id;
+    const { period = 'week' } = req.query;
     
-    // Get all focus sessions
-    const focusSessions = await FocusSession.find({ user: userId }).sort({ startTime: -1 });
+    // Calculate date range based on period
+    let startDate, endDate;
+    const now = new Date();
+    
+    switch (period) {
+      case 'today':
+        startDate = new Date(now);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(now);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      case 'week':
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - 7);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(now);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      case 'month':
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - 30);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(now);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      default:
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - 7);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(now);
+        endDate.setHours(23, 59, 59, 999);
+    }
+    
+    // Get focus sessions for the period
+    const focusSessions = await FocusSession.find({ 
+      user: userId,
+      startTime: { $gte: startDate, $lte: endDate }
+    }).sort({ startTime: -1 });
     
     // Calculate current streak
     let currentStreak = 0;
@@ -355,11 +392,24 @@ router.get('/streak', auth, async (req, res) => {
       lastDate = date;
     }
     
+    const totalFocusTime = Math.round(focusSessions.reduce((total, session) => total + (session.duration || 0), 0) / 60);
+    
+    // Debug logging for streak
+    console.log('Streak Debug:', {
+      period,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      focusSessionsCount: focusSessions.length,
+      totalFocusTime,
+      currentStreak,
+      longestStreak
+    });
+    
     res.json({
       currentStreak,
       longestStreak,
       totalSessions: focusSessions.length,
-      totalFocusTime: Math.round(focusSessions.reduce((total, session) => total + (session.duration || 0), 0) / 60)
+      totalFocusTime
     });
   } catch (error) {
     console.error('Error calculating streak:', error);

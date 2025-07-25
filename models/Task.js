@@ -50,6 +50,9 @@ const taskSchema = new mongoose.Schema({
     },
     lastReminderSent: {
         type: Date
+    },
+    calendarEventId: {
+        type: String
     }
 });
 

@@ -23,14 +23,20 @@ router.get('/focus-summary', auth, async (req, res) => {
         endDate.setHours(23, 59, 59, 999);
         break;
       case 'week':
+        // Show last 7 days for consistency
         startDate = new Date(now);
         startDate.setDate(startDate.getDate() - 7);
-        endDate = now;
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(now);
+        endDate.setHours(23, 59, 59, 999);
         break;
       case 'month':
+        // Show last 30 days for consistency
         startDate = new Date(now);
-        startDate.setMonth(startDate.getMonth() - 1);
-        endDate = now;
+        startDate.setDate(startDate.getDate() - 30);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(now);
+        endDate.setHours(23, 59, 59, 999);
         break;
       default:
         startDate = new Date(now);
@@ -38,15 +44,13 @@ router.get('/focus-summary', auth, async (req, res) => {
         endDate = now;
     }
     
-    // Get focus sessions and tasks for the period
+    // Get all focus sessions and tasks (all-time data for consistency)
     const [focusSessions, tasks] = await Promise.all([
       FocusSession.find({
-        user: userId,
-        startTime: { $gte: startDate, $lte: endDate }
+        user: userId
       }).sort({ startTime: 1 }),
       Task.find({
-        user: userId,
-        createdAt: { $gte: startDate, $lte: endDate }
+        user: userId
       })
     ]);
     
@@ -83,8 +87,10 @@ router.get('/focus-summary', auth, async (req, res) => {
     
     // Productivity score (based on consistency, total time, and task completion)
     const daysWithSessions = Object.keys(dailyStats).length;
-    const expectedDays = period === 'today' ? 1 : period === 'week' ? 7 : 30;
-    const consistencyScore = Math.round((daysWithSessions / expectedDays) * 100);
+    // For all-time data, calculate consistency based on total days since first session
+    const firstSession = focusSessions.length > 0 ? focusSessions[0].startTime : new Date();
+    const totalDays = Math.max(1, Math.ceil((now - firstSession) / (1000 * 60 * 60 * 24)));
+    const consistencyScore = Math.round((daysWithSessions / totalDays) * 100);
     const productivityScore = Math.min(100, Math.round((consistencyScore + (totalHours * 10) + taskCompletionRate) / 3));
     
     res.json({

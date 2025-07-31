@@ -48,6 +48,11 @@ const aiNotConfiguredResponse = (res) => {
     return res.status(503).json({ msg: 'The AI assistant is not configured by the administrator.' });
 }
 
+const systemMessage = { 
+    role: "system", 
+    content: "You are a helpful assistant for students with their lab assignments. Please format your responses using Markdown. For example, use bullet points for lists and backticks for code snippets." 
+};
+
 // @route   POST api/ai/chat
 // @desc    Create a new chat session
 // @access  Private
@@ -74,7 +79,7 @@ router.post('/chat', auth, async (req, res) => {
         const chat = await newChat.save();
 
         const completion = await client.chat.completions.create({
-            messages: [{ role: "system", content: "You are a helpful assistant for students with their lab assignments." }, { role: "user", content: message }],
+            messages: [systemMessage, { role: "user", content: message }],
             model: process.env.AZURE_OPENAI_DEPLOYMENT,
         });
 
@@ -154,8 +159,9 @@ router.post('/chat/upload', [auth, upload.single('file')], async (req, res) => {
             });
         }
 
+        const messagesForApi = [systemMessage, ...chat.messages.map(m => ({ role: m.role, content: m.content }))];
         const completion = await client.chat.completions.create({
-            messages: chat.messages.map(m => ({ role: m.role, content: m.content })),
+            messages: messagesForApi,
             model: process.env.AZURE_OPENAI_DEPLOYMENT,
         });
 
@@ -204,8 +210,9 @@ router.post('/chat/:id', auth, async (req, res) => {
 
         chat.messages.push(userMessage);
 
+        const messagesForApi = [systemMessage, ...chat.messages.map(m => ({ role: m.role, content: m.content }))];
         const completion = await client.chat.completions.create({
-            messages: chat.messages.map(m => ({ role: m.role, content: m.content })),
+            messages: messagesForApi,
             model: process.env.AZURE_OPENAI_DEPLOYMENT,
         });
 

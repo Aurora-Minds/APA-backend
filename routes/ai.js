@@ -2,30 +2,61 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const Chat = require('../models/Chat');
-const openai = require('openai');
+const { AzureOpenAI } = require('openai');
 const multer = require('multer');
 const pdf = require('pdf-parse');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Initialize OpenAI client lazily to ensure environment variables are loaded
-let openaiClient = null;
-const getOpenAIClient = () => {
-    if (!openaiClient) {
-        if (!process.env.OPENAI_API_KEY) {
-            throw new Error('OPENAI_API_KEY environment variable is not set');
-        }
-        openaiClient = new openai({
-            apiKey: process.env.OPENAI_API_KEY
-        });
+// Initialize Azure OpenAI client lazily to ensure environment variables are loaded
+let azureOpenAIClient = null;
+let isAzureOpenAIConfigured = true; // Assume configured until proven otherwise
+
+const getAzureOpenAIClient = () => {
+    if (azureOpenAIClient) {
+        return azureOpenAIClient;
     }
-    return openaiClient;
+    if (!isAzureOpenAIConfigured) {
+        return null;
+    }
+
+    const { AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY, AZURE_OPENAI_API_VERSION, AZURE_OPENAI_DEPLOYMENT } = process.env;
+
+    if (!AZURE_OPENAI_ENDPOINT || !AZURE_OPENAI_API_KEY || !AZURE_OPENAI_API_VERSION || !AZURE_OPENAI_DEPLOYMENT) {
+        console.error('Azure OpenAI environment variables are not fully set. AI assistant will be unavailable.');
+        isAzureOpenAIConfigured = false;
+        return null;
+    }
+
+    try {
+        azureOpenAIClient = new AzureOpenAI({
+            endpoint: AZURE_OPENAI_ENDPOINT,
+            apiKey: AZURE_OPENAI_API_KEY,
+            apiVersion: AZURE_OPENAI_API_VERSION,
+            deployment: AZURE_OPENAI_DEPLOYMENT,
+        });
+    } catch (err) {
+        console.error('Failed to initialize Azure OpenAI client:', err);
+        isAzureOpenAIConfigured = false;
+        return null;
+    }
+
+    return azureOpenAIClient;
 };
+
+const aiNotConfiguredResponse = (res) => {
+    return res.status(503).json({ msg: 'The AI assistant is not configured by the administrator.' });
+}
 
 // @route   POST api/ai/chat
 // @desc    Create a new chat session
 // @access  Private
 router.post('/chat', auth, async (req, res) => {
+    const client = getAzureOpenAIClient();
+    if (!client) {
+        return aiNotConfiguredResponse(res);
+    }
+
     const { title, message } = req.body;
 
     try {
@@ -42,9 +73,9 @@ router.post('/chat', auth, async (req, res) => {
 
         const chat = await newChat.save();
 
-        const completion = await getOpenAIClient().chat.completions.create({
+        const completion = await client.chat.completions.create({
             messages: [{ role: "system", content: "You are a helpful assistant for students with their lab assignments." }, { role: "user", content: message }],
-            model: "gpt-3.5-turbo",
+            model: process.env.AZURE_OPENAI_DEPLOYMENT,
         });
 
         const assistantMessage = {
@@ -57,7 +88,7 @@ router.post('/chat', auth, async (req, res) => {
 
         res.json(chat);
     } catch (err) {
-        console.error('Error with OpenAI chat completion:', err);
+        console.error('Error with Azure OpenAI chat completion:', err);
         res.status(500).send('Server Error');
     }
 });
@@ -79,6 +110,11 @@ router.get('/chat/history', auth, async (req, res) => {
 // @desc    Create a new chat session from a PDF
 // @access  Private
 router.post('/chat/upload', [auth, upload.single('file')], async (req, res) => {
+    const client = getAzureOpenAIClient();
+    if (!client) {
+        return aiNotConfiguredResponse(res);
+    }
+
     if (!req.file) {
         return res.status(400).send('No file uploaded.');
     }
@@ -118,9 +154,9 @@ router.post('/chat/upload', [auth, upload.single('file')], async (req, res) => {
             });
         }
 
-        const completion = await getOpenAIClient().chat.completions.create({
+        const completion = await client.chat.completions.create({
             messages: chat.messages.map(m => ({ role: m.role, content: m.content })),
-            model: "gpt-3.5-turbo",
+            model: process.env.AZURE_OPENAI_DEPLOYMENT,
         });
 
         const assistantMessage = {
@@ -142,6 +178,11 @@ router.post('/chat/upload', [auth, upload.single('file')], async (req, res) => {
 // @desc    Send a message in an existing chat
 // @access  Private
 router.post('/chat/:id', auth, async (req, res) => {
+    const client = getAzureOpenAIClient();
+    if (!client) {
+        return aiNotConfiguredResponse(res);
+    }
+
     const { message } = req.body;
     const chatId = req.params.id;
 
@@ -163,9 +204,9 @@ router.post('/chat/:id', auth, async (req, res) => {
 
         chat.messages.push(userMessage);
 
-        const completion = await getOpenAIClient().chat.completions.create({
+        const completion = await client.chat.completions.create({
             messages: chat.messages.map(m => ({ role: m.role, content: m.content })),
-            model: "gpt-3.5-turbo",
+            model: process.env.AZURE_OPENAI_DEPLOYMENT,
         });
 
         const assistantMessage = {

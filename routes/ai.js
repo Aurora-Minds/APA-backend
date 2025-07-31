@@ -62,9 +62,11 @@ router.post('/chat', auth, async (req, res) => {
         return aiNotConfiguredResponse(res);
     }
 
-    const { title, message } = req.body;
+    const { message } = req.body;
 
     try {
+        const title = message.substring(0, 30);
+
         const initialMessage = {
             role: 'user',
             content: message
@@ -227,6 +229,34 @@ router.post('/chat/:id', auth, async (req, res) => {
         res.json(chat);
     } catch (err) {
         console.error('Error with OpenAI chat completion:', err);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   DELETE api/ai/chat/:id
+// @desc    Delete a chat session
+// @access  Private
+router.delete('/chat/:id', auth, async (req, res) => {
+    try {
+        const chat = await Chat.findById(req.params.id);
+
+        if (!chat) {
+            return res.status(404).json({ msg: 'Chat not found' });
+        }
+
+        // Make sure user owns the chat
+        if (chat.user.toString() !== req.user.id) {
+            return res.status(401).json({ msg: 'Not authorized' });
+        }
+
+        await Chat.findByIdAndDelete(req.params.id);
+
+        res.json({ msg: 'Chat removed' });
+    } catch (err) {
+        console.error('Error deleting chat:', err.message);
+        if (err.name === 'CastError') {
+            return res.status(400).json({ msg: 'Invalid chat ID' });
+        }
         res.status(500).send('Server Error');
     }
 });

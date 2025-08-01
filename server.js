@@ -10,14 +10,16 @@ dotenv.config();
 
 const app = express();
 
-// CORS middleware for development
+// CORS middleware configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? ['https://www.auroraminds.xyz', 'https://auroraminds.xyz']
     : ['http://localhost:3000', 'http://localhost:3001'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token']
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'DNT', 'User-Agent', 'X-Requested-With', 'If-Modified-Since', 'Cache-Control', 'Range'],
+  exposedHeaders: ['Content-Length', 'Content-Range'],
+  maxAge: 86400 // 24 hours
 }));
 
 // Session middleware (required for passport) - without Redis for now

@@ -189,12 +189,29 @@ router.put('/:id', [
             }
             throw new Error('Due date must be in YYYY-MM-DD or ISO8601 format');
         }),
-        check('priority', 'Priority must be low, medium, or high').optional().isIn(['low', 'medium', 'high']),
+        check('priority', 'Priority must be low, medium, high, or none').optional().custom((value, { req }) => {
+            // Only validate priority from request body, ignore headers
+            const bodyPriority = req.body.priority;
+            if (bodyPriority && !['low', 'medium', 'high', 'none'].includes(bodyPriority)) {
+                throw new Error('Priority must be low, medium, high, or none');
+            }
+            return true;
+        }),
         check('status', 'Status must be pending, in-progress, or completed').optional().isIn(['pending', 'in-progress', 'completed'])
     ]
 ], async (req, res) => {
+    console.log('Task update request received:', {
+        taskId: req.params.id,
+        body: req.body,
+        user: req.user.id,
+        priorityHeader: req.headers.priority
+    });
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+        console.log('Task update validation errors:', errors.array());
+        console.log('Request body priority:', req.body.priority);
+        console.log('Request headers priority:', req.headers.priority);
         return res.status(400).json({ errors: errors.array() });
     }
 

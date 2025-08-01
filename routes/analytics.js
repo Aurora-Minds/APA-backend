@@ -12,6 +12,8 @@ router.get('/focus-summary', auth, async (req, res) => {
     const { period = 'week' } = req.query;
     const userId = req.user.id;
     
+    console.log('Analytics request:', { period, userId });
+    
     let startDate, endDate;
     const now = new Date();
     
@@ -134,8 +136,12 @@ router.get('/focus-summary', auth, async (req, res) => {
       consistencyScore,
       productivityScore,
       focusSessionsCount: focusSessions.length,
-      tasksCount: tasks.length
+      tasksCount: tasks.length,
+      userId
     });
+    
+    console.log('Focus sessions found:', focusSessions.map(s => ({ id: s._id, startTime: s.startTime, duration: s.duration })));
+    console.log('Tasks found:', tasks.map(t => ({ id: t._id, title: t.title, status: t.status, createdAt: t.createdAt })));
     
     res.json({
       period,
@@ -413,6 +419,40 @@ router.get('/streak', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Error calculating streak:', error);
+    res.status(500).json({ msg: 'Server error' });
+  }
+});
+
+// @route   GET api/analytics/test
+// @desc    Test endpoint to check data availability
+// @access  Private
+router.get('/test', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Get all focus sessions and tasks for the user (no date filtering)
+    const [allFocusSessions, allTasks] = await Promise.all([
+      FocusSession.find({ user: userId }),
+      Task.find({ user: userId })
+    ]);
+    
+    console.log('Test endpoint - All data for user:', {
+      userId,
+      totalFocusSessions: allFocusSessions.length,
+      totalTasks: allTasks.length,
+      focusSessions: allFocusSessions.map(s => ({ id: s._id, startTime: s.startTime, duration: s.duration })),
+      tasks: allTasks.map(t => ({ id: t._id, title: t.title, status: t.status, createdAt: t.createdAt }))
+    });
+    
+    res.json({
+      userId,
+      totalFocusSessions: allFocusSessions.length,
+      totalTasks: allTasks.length,
+      focusSessions: allFocusSessions,
+      tasks: allTasks
+    });
+  } catch (error) {
+    console.error('Test endpoint error:', error);
     res.status(500).json({ msg: 'Server error' });
   }
 });

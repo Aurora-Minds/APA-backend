@@ -65,8 +65,17 @@ router.post('/', [
         check('priority', 'Priority must be low, medium, high, or none').optional().isIn(['low', 'medium', 'high', 'none'])
     ]
 ], async (req, res) => {
+    console.log('Task creation request received:', {
+        body: req.body,
+        user: req.user.id,
+        priorityHeader: req.headers.priority,
+        allHeaders: Object.keys(req.headers)
+    });
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+        console.log('Validation errors:', errors.array());
+        console.log('Request body priority:', req.body.priority);
+        console.log('Request headers priority:', req.headers.priority);
         return res.status(400).json({ errors: errors.array() });
     }
 

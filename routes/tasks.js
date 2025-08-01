@@ -62,7 +62,14 @@ router.post('/', [
             }
             throw new Error('Due date must be in YYYY-MM-DD or ISO8601 format');
         }),
-        check('priority', 'Priority must be low, medium, high, or none').optional().isIn(['low', 'medium', 'high', 'none'])
+        check('priority', 'Priority must be low, medium, high, or none').optional().custom((value, { req }) => {
+            // Only validate priority from request body, ignore headers
+            const bodyPriority = req.body.priority;
+            if (bodyPriority && !['low', 'medium', 'high', 'none'].includes(bodyPriority)) {
+                throw new Error('Priority must be low, medium, high, or none');
+            }
+            return true;
+        })
     ]
 ], async (req, res) => {
     console.log('Task creation request received:', {

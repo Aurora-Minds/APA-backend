@@ -96,7 +96,11 @@ router.post('/chat', auth, async (req, res) => {
         res.json(chat);
     } catch (err) {
         console.error('Error with Azure OpenAI chat completion:', err);
-        res.status(500).send('Server Error');
+        if (err.status === 401) {
+            res.status(503).json({ msg: 'AI service is temporarily unavailable. Please try again later.' });
+        } else {
+            res.status(500).json({ msg: 'Server Error' });
+        }
     }
 });
 
@@ -178,7 +182,11 @@ router.post('/chat/upload', [auth, upload.single('file')], async (req, res) => {
         res.json(chat);
     } catch (err) {
         console.error('Error with OpenAI chat completion:', err);
-        res.status(500).send('Server Error');
+        if (err.status === 401) {
+            res.status(503).json({ msg: 'AI service is temporarily unavailable. Please try again later.' });
+        } else {
+            res.status(500).json({ msg: 'Server Error' });
+        }
     }
 });
 
@@ -229,7 +237,11 @@ router.post('/chat/:id', auth, async (req, res) => {
         res.json(chat);
     } catch (err) {
         console.error('Error with OpenAI chat completion:', err);
-        res.status(500).send('Server Error');
+        if (err.status === 401) {
+            res.status(503).json({ msg: 'AI service is temporarily unavailable. Please try again later.' });
+        } else {
+            res.status(500).json({ msg: 'Server Error' });
+        }
     }
 });
 
@@ -257,7 +269,7 @@ router.delete('/chat/:id', auth, async (req, res) => {
         if (err.name === 'CastError') {
             return res.status(400).json({ msg: 'Invalid chat ID' });
         }
-        res.status(500).send('Server Error');
+        res.status(500).json({ msg: 'Server Error' });
     }
 });
 

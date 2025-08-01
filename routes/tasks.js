@@ -62,7 +62,7 @@ router.post('/', [
             }
             throw new Error('Due date must be in YYYY-MM-DD or ISO8601 format');
         }),
-        check('priority', 'Priority must be low, medium, or high').optional().isIn(['low', 'medium', 'high'])
+        check('priority', 'Priority must be low, medium, high, or none').optional().isIn(['low', 'medium', 'high', 'none'])
     ]
 ], async (req, res) => {
     const errors = validationResult(req);

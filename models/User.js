@@ -52,7 +52,7 @@ const userSchema = new mongoose.Schema({
     },
     subjects: {
         type: [String],
-        default: ['English', 'Math', 'Science', 'History']
+        default: ['English', 'Math', 'Science', 'History', 'Computer Science', 'Art', 'Music', 'Geography']
     },
     xp: {
         type: Number,

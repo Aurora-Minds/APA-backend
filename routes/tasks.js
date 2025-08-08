@@ -124,40 +124,18 @@ router.post('/', [
 
         // Google Calendar integration
         const user = await User.findById(req.user.id);
-        if (user.googleRefreshToken) {
-            console.log('Found Google Refresh Token for user:', user.email);
-            try {
-                const oauth2Client = getOauth2Client(user.googleRefreshToken);
-                const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-
-                const event = {
-                    summary: task.title,
-                    description: task.description,
-                    start: {
-                        dateTime: task.dueDate,
-                        timeZone: 'America/Toronto',
-                    },
-                    end: {
-                        dateTime: task.dueDate, // Assuming a default duration
-                        timeZone: 'America/Toronto',
-                    },
-                };
-
-                console.log('Creating Google Calendar event with data:', JSON.stringify(event, null, 2));
-
-                await calendar.events.insert({
-                    calendarId: 'primary',
-                    resource: event,
-                });
-
-                console.log('Successfully created Google Calendar event.');
-
-            } catch (err) {
-                console.error('Error creating Google Calendar event:', err.response ? err.response.data : err.message);
-                // Don't block task creation if calendar event fails
+        if (user && user.googleRefreshToken) {
+            if (task.dueDate) { // Only sync if there is a due date
+                console.log('Syncing task to Google Calendar for user:', user.email);
+                try {
+                    await syncTaskToCalendar(req.user.id, task);
+                } catch (err) {
+                    console.error('Error syncing task to Google Calendar:', err.message);
+                    // Do not block task creation if calendar sync fails
+                }
             }
         } else {
-            console.log('No Google Refresh Token found for this user.');
+            console.log('No Google Refresh Token found for this user, skipping calendar sync.');
         }
         
         res.json(task);

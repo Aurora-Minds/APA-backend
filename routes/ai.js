@@ -56,20 +56,29 @@ const systemMessage = {
 // @route   POST api/ai/chat
 // @desc    Create a new chat session
 // @access  Private
-router.post('/chat', auth, async (req, res) => {
+router.post('/chat', [auth, upload.single('file')], async (req, res) => {
     const client = getAzureOpenAIClient();
     if (!client) {
         return aiNotConfiguredResponse(res);
     }
 
     const { message } = req.body;
+    let fullMessage = message;
 
     try {
+        if (req.file) {
+            const data = await pdf(req.file.buffer);
+            fullMessage = `Attached PDF content: ${data.text}
+
+${message}`;
+        }
+
         const title = message.substring(0, 30);
 
         const initialMessage = {
             role: 'user',
-            content: message
+            content: message,
+            attachment: req.file ? { filename: req.file.originalname } : undefined
         };
 
         const newChat = new Chat({
@@ -81,7 +90,7 @@ router.post('/chat', auth, async (req, res) => {
         const chat = await newChat.save();
 
         const completion = await client.chat.completions.create({
-            messages: [systemMessage, { role: "user", content: message }],
+            messages: [systemMessage, { role: "user", content: fullMessage }],
             model: process.env.AZURE_OPENAI_DEPLOYMENT,
         });
 
@@ -117,83 +126,10 @@ router.get('/chat/history', auth, async (req, res) => {
     }
 });
 
-// @route   POST api/ai/chat/upload
-// @desc    Create a new chat session from a PDF
-// @access  Private
-router.post('/chat/upload', [auth, upload.single('file')], async (req, res) => {
-    const client = getAzureOpenAIClient();
-    if (!client) {
-        return aiNotConfiguredResponse(res);
-    }
-
-    if (!req.file) {
-        return res.status(400).send('No file uploaded.');
-    }
-
-    const { chatId } = req.body;
-
-    try {
-        const data = await pdf(req.file.buffer);
-        const message = data.text;
-
-        let chat;
-
-        if (chatId) {
-            chat = await Chat.findById(chatId);
-            if (!chat) {
-                return res.status(404).json({ msg: 'Chat not found' });
-            }
-            if (chat.user.toString() !== req.user.id) {
-                return res.status(401).json({ msg: 'User not authorized' });
-            }
-
-            const userMessage = {
-                role: 'user',
-                content: message
-            };
-            chat.messages.push(userMessage);
-
-        } else {
-            const initialMessage = {
-                role: 'user',
-                content: message
-            };
-            chat = new Chat({
-                user: req.user.id,
-                title: req.file.originalname,
-                messages: [initialMessage]
-            });
-        }
-
-        const messagesForApi = [systemMessage, ...chat.messages.map(m => ({ role: m.role, content: m.content }))];
-        const completion = await client.chat.completions.create({
-            messages: messagesForApi,
-            model: process.env.AZURE_OPENAI_DEPLOYMENT,
-        });
-
-        const assistantMessage = {
-            role: 'assistant',
-            content: completion.choices[0].message.content
-        };
-
-        chat.messages.push(assistantMessage);
-        await chat.save();
-
-        res.json(chat);
-    } catch (err) {
-        console.error('Error with OpenAI chat completion:', err);
-        if (err.status === 401) {
-            res.status(503).json({ msg: 'AI service is temporarily unavailable. Please try again later.' });
-        } else {
-            res.status(500).json({ msg: 'Server Error' });
-        }
-    }
-});
-
 // @route   POST api/ai/chat/:id
 // @desc    Send a message in an existing chat
 // @access  Private
-router.post('/chat/:id', auth, async (req, res) => {
+router.post('/chat/:id', [auth, upload.single('file')], async (req, res) => {
     const client = getAzureOpenAIClient();
     if (!client) {
         return aiNotConfiguredResponse(res);
@@ -201,8 +137,16 @@ router.post('/chat/:id', auth, async (req, res) => {
 
     const { message } = req.body;
     const chatId = req.params.id;
+    let fullMessage = message;
 
     try {
+        if (req.file) {
+            const data = await pdf(req.file.buffer);
+            fullMessage = `Attached PDF content: ${data.text}
+
+${message}`;
+        }
+
         const chat = await Chat.findById(chatId);
 
         if (!chat) {
@@ -215,7 +159,8 @@ router.post('/chat/:id', auth, async (req, res) => {
 
         const userMessage = {
             role: 'user',
-            content: message
+            content: message,
+            attachment: req.file ? { filename: req.file.originalname } : undefined
         };
 
         chat.messages.push(userMessage);

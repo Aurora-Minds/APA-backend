@@ -10,6 +10,11 @@ const messageSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    attachment: {
+        filename: {
+            type: String
+        }
+    },
     timestamp: {
         type: Date,
         default: Date.now

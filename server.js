@@ -59,6 +59,7 @@ const githubAuthRoutes = require('./routes/githubAuth');
 const emailReminderRoutes = require('./routes/emailReminders');
 const analyticsRoutes = require('./routes/analytics');
 const googleCalendarRoutes = require('./routes/googleCalendar');
+const rewardsRoutes = require('./routes/rewards');
 
 app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
@@ -70,6 +71,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/email-reminders', emailReminderRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/google-calendar', googleCalendarRoutes);
+app.use('/api/rewards', rewardsRoutes);
 
 const PORT = process.env.PORT || 5001;
 

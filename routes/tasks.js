@@ -4,6 +4,7 @@ const { check, validationResult } = require('express-validator');
 const Task = require('../models/Task');
 const User = require('../models/User');
 const { google } = require('googleapis');
+const { syncTaskToCalendar, deleteCalendarEvent } = require('../services/googleCalendar');
 
 // Middleware to verify JWT token
 const auth = require('../middleware/auth');
@@ -272,6 +273,16 @@ router.delete('/:id', auth, async (req, res) => {
         // Make sure user owns the task
         if (task.user.toString() !== req.user.id) {
             return res.status(401).json({ msg: 'Not authorized' });
+        }
+
+        // If task is linked to a calendar event, delete it
+        if (task.calendarEventId) {
+            try {
+                await deleteCalendarEvent(req.user.id, task.calendarEventId);
+            } catch (calendarErr) {
+                // Log the error but don't block task deletion
+                console.error(`Failed to delete calendar event ${task.calendarEventId} for task ${task._id}:`, calendarErr.message);
+            }
         }
 
         await Task.findByIdAndDelete(req.params.id);
